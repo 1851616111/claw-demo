@@ -1,4 +1,15 @@
 {
+  "channels": {
+    "slack": {
+      "groupPolicy": "allowlist",
+      "channels": {
+        "REPLACE_WITH_SLACK_CHANNEL_ID": {
+          "allow": true,
+          "requireMention": false
+        }
+      }
+    }
+  },
   "hooks": {
     "enabled": true,
     "token": "${OPENCLAW_HOOK_TOKEN}",
@@ -19,7 +30,9 @@
         "name": "Jira Relay",
         "sessionKey": "hook:jira:{{issue.key}}",
         "messageTemplate": "Jira automation event received.\nEvent: {{event.name}}\nProject: {{issue.projectKey}}\nIssue: {{issue.key}} - {{issue.summary}}\nStatus: {{issue.status}}\nPrevious status: {{event.previousStatus}}\nService domain: {{event.serviceDomain}}\nExecution mode: {{event.executionMode}}\nTask goal: {{context.taskGoal}}\nPlanner output: {{context.plannerOutput}}\nTask context: {{context.taskContext}}\nIssue URL: {{issue.issueUrl}}",
-        "deliver": false
+        "deliver": true,
+        "channel": "slack",
+        "to": "channel:REPLACE_WITH_SLACK_CHANNEL_ID"
       }
     ]
   }

@@ -80,6 +80,9 @@ relay 只做三件事：
 - `POST /hooks/jira-relay`
 - `action: "agent"`
 - `sessionKey: "hook:jira:{{issue.key}}"`
+- `deliver: true`
+- `channel: "slack"`
+- `to: "channel:<slack-channel-id>"`
 
 建议：
 
@@ -87,7 +90,15 @@ relay 只做三件事：
 2. 将该 token 同时填到：
    - OpenClaw 配置里的 `hooks.token`
    - relay 的 `LOBSTER_AUTH_TOKEN`
-3. 保持 OpenClaw hooks 只暴露在 loopback，由 relay 本地转发
+3. 如果你希望 Jira 事件直接发到 Slack，把映射里的 `deliver` 打开，并设置：
+   - `channel: "slack"`
+   - `to: "channel:<你的频道ID>"`
+4. 对 Slack 频道入口，建议同时配置：
+   - `channels.slack.groupPolicy: "allowlist"`
+   - `channels.slack.channels.<id>.allow: true`
+   - `channels.slack.channels.<id>.requireMention: false`
+     如果你只希望机器人在被 `@OpenClaw` 时回复，再改成 `true`
+5. 保持 OpenClaw hooks 只暴露在 loopback，由 relay 本地转发
 
 ## Jira Automation 请求体示例
 
