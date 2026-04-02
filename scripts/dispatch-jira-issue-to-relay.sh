@@ -7,6 +7,7 @@ RELAY_URL="${RELAY_URL:-http://127.0.0.1:8080/jira/events}"
 SITE_URL="${SITE_URL:-https://netstars-sre-demo.atlassian.net}"
 BOARD_URL="${BOARD_URL:-https://netstars-sre-demo.atlassian.net/jira/software/projects/KAN/boards/2}"
 BOARD_NAME="${BOARD_NAME:-龙虾骑士看板}"
+ACLI_RUN_AS_USER="${ACLI_RUN_AS_USER:-${SUDO_USER:-ubuntu}}"
 
 if [[ -z "$ISSUE_KEY" ]]; then
   echo "Usage: $0 <KAN-KEY>" >&2
@@ -23,7 +24,15 @@ if [[ -z "${RELAY_AUTH_TOKEN:-}" ]]; then
   exit 1
 fi
 
-issue_json="$(acli jira workitem view "$ISSUE_KEY" --json)"
+run_acli() {
+  if [[ "$(id -u)" -eq 0 ]]; then
+    sudo -u "$ACLI_RUN_AS_USER" -H env HOME="/home/$ACLI_RUN_AS_USER" acli "$@"
+  else
+    acli "$@"
+  fi
+}
+
+issue_json="$(run_acli jira workitem view "$ISSUE_KEY" --json)"
 
 payload="$(ISSUE_JSON="$issue_json" EVENT_NAME="$EVENT_NAME" SITE_URL="$SITE_URL" BOARD_URL="$BOARD_URL" BOARD_NAME="$BOARD_NAME" python3 - <<'PY'
 import json
