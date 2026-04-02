@@ -70,7 +70,7 @@ async function main() {
     authToken: "smoke-token",
     requestTimeoutMs: 5000,
     bodyLimitBytes: 1024 * 1024,
-    lobsterTargetUrl: `http://127.0.0.1:${lobsterAddress.port}/jira/events`,
+    lobsterTargetUrl: `http://127.0.0.1:${lobsterAddress.port}/hooks/jira-relay`,
     lobsterAuthToken: ""
   });
 

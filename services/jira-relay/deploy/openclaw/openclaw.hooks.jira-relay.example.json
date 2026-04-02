@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "enabled": true,
+    "token": "${OPENCLAW_HOOK_TOKEN}",
+    "path": "/hooks",
+    "maxBodyBytes": 262144,
+    "defaultSessionKey": "hook:jira",
+    "allowRequestSessionKey": false,
+    "allowedSessionKeyPrefixes": [
+      "hook:"
+    ],
+    "mappings": [
+      {
+        "match": {
+          "path": "jira-relay"
+        },
+        "action": "agent",
+        "wakeMode": "now",
+        "name": "Jira Relay",
+        "sessionKey": "hook:jira:{{issue.key}}",
+        "messageTemplate": "Jira automation event received.\nEvent: {{event.name}}\nProject: {{issue.projectKey}}\nIssue: {{issue.key}} - {{issue.summary}}\nStatus: {{issue.status}}\nPrevious status: {{event.previousStatus}}\nService domain: {{event.serviceDomain}}\nExecution mode: {{event.executionMode}}\nTask goal: {{context.taskGoal}}\nPlanner output: {{context.plannerOutput}}\nTask context: {{context.taskContext}}\nIssue URL: {{issue.issueUrl}}",
+        "deliver": false
+      }
+    ]
+  }
+}

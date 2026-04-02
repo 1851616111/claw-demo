@@ -71,7 +71,7 @@ function createConfig(options = {}) {
     authToken: process.env.RELAY_AUTH_TOKEN || "",
     requestTimeoutMs: parseInteger(process.env.REQUEST_TIMEOUT_MS, 10000),
     bodyLimitBytes: parseInteger(process.env.BODY_LIMIT_BYTES, 1024 * 1024),
-    lobsterTargetUrl: process.env.LOBSTER_TARGET_URL || "http://127.0.0.1:18789/jira/events",
+    lobsterTargetUrl: process.env.LOBSTER_TARGET_URL || "http://127.0.0.1:18789/hooks/jira-relay",
     lobsterAuthToken: process.env.LOBSTER_AUTH_TOKEN || ""
   };
 }
