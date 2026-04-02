@@ -13,13 +13,13 @@ if [[ -z "$ISSUE_KEY" ]]; then
   exit 1
 fi
 
-if [[ -f /etc/jira-relay.env ]]; then
+if [[ -r /etc/jira-relay.env ]]; then
   # shellcheck disable=SC1091
   source /etc/jira-relay.env
 fi
 
 if [[ -z "${RELAY_AUTH_TOKEN:-}" ]]; then
-  echo "RELAY_AUTH_TOKEN is not set. Source /etc/jira-relay.env first." >&2
+  echo "RELAY_AUTH_TOKEN is not set. Export it first or run this script with sudo so it can read /etc/jira-relay.env." >&2
   exit 1
 fi
 
@@ -66,4 +66,3 @@ curl -fsS -X POST "$RELAY_URL" \
   -H "Authorization: Bearer ${RELAY_AUTH_TOKEN}" \
   -H "Content-Type: application/json" \
   --data "$payload"
-
