@@ -59,6 +59,134 @@ function isPlainObject(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
+function timingSafeEqualString(left, right) {
+  if (typeof left !== "string" || typeof right !== "string") {
+    return false;
+  }
+
+  const leftBuffer = Buffer.from(left, "utf8");
+  const rightBuffer = Buffer.from(right, "utf8");
+
+  if (leftBuffer.length !== rightBuffer.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+function extractText(value) {
+  if (value == null) {
+    return null;
+  }
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+
+  if (Array.isArray(value)) {
+    const parts = value
+      .map((item) => extractText(item))
+      .filter((item) => typeof item === "string" && item.trim());
+    return parts.length ? parts.join(" ").replace(/\s+/g, " ").trim() : null;
+  }
+
+  if (isPlainObject(value)) {
+    if (typeof value.text === "string" && value.text.trim()) {
+      return value.text;
+    }
+
+    if (value.type === "hardBreak") {
+      return "\n";
+    }
+
+    if (Array.isArray(value.content)) {
+      const joined = value.content
+        .map((item) => extractText(item))
+        .filter((item) => typeof item === "string" && item.length > 0)
+        .join(" ");
+      return joined ? joined.replace(/[ \t]+\n/g, "\n").replace(/\n[ \t]+/g, "\n").replace(/\s+/g, " ").trim() : null;
+    }
+
+    try {
+      return JSON.stringify(value);
+    } catch (error) {
+      return String(value);
+    }
+  }
+
+  return String(value);
+}
+
+function extractPreviousStatus(rawPayload) {
+  if (rawPayload.previousStatus || rawPayload.fromStatus) {
+    return rawPayload.previousStatus || rawPayload.fromStatus;
+  }
+
+  if (typeof rawPayload.changelog?.fromString === "string") {
+    return rawPayload.changelog.fromString;
+  }
+
+  const items = rawPayload.changelog?.items;
+  if (!Array.isArray(items)) {
+    return null;
+  }
+
+  const statusItem = items.find(
+    (item) =>
+      item &&
+      (item.fieldId === "status" ||
+        item.field === "status" ||
+        item.field === "状态" ||
+        item.fieldtype === "jira")
+  );
+
+  return statusItem?.fromString || null;
+}
+
+function parseWebhookSignature(headerValue) {
+  if (!headerValue || typeof headerValue !== "string") {
+    return null;
+  }
+
+  const separatorIndex = headerValue.indexOf("=");
+  if (separatorIndex === -1) {
+    return null;
+  }
+
+  const algorithm = headerValue.slice(0, separatorIndex).trim().toLowerCase();
+  const signature = headerValue.slice(separatorIndex + 1).trim().toLowerCase();
+
+  if (!algorithm || !signature) {
+    return null;
+  }
+
+  return { algorithm, signature };
+}
+
+function verifyWebhookSignature(secret, rawBody, headerValue) {
+  const parsed = parseWebhookSignature(headerValue);
+  if (!secret || !parsed || !rawBody) {
+    return false;
+  }
+
+  let digest;
+  try {
+    digest = crypto
+      .createHmac(parsed.algorithm, secret)
+      .update(rawBody, "utf8")
+      .digest("hex")
+      .toLowerCase();
+  } catch (error) {
+    return false;
+  }
+
+  return timingSafeEqualString(digest, parsed.signature);
+}
+
 function buildIssueUrl(baseUrl, issueKey) {
   if (!baseUrl || !issueKey) {
     return null;
@@ -81,6 +209,7 @@ function createConfig(options = {}) {
     relayPath,
     healthPath,
     authToken: process.env.RELAY_AUTH_TOKEN || "",
+    webhookSecret: process.env.JIRA_WEBHOOK_SECRET || process.env.RELAY_AUTH_TOKEN || "",
     requestTimeoutMs: parseInteger(process.env.REQUEST_TIMEOUT_MS, 10000),
     bodyLimitBytes: parseInteger(process.env.BODY_LIMIT_BYTES, 1024 * 1024),
     jiraBaseUrl: process.env.JIRA_BASE_URL || "",
@@ -144,15 +273,15 @@ function normalizePayload(rawPayload, config = {}) {
     config.defaultBoardName ||
     null;
   const taskContext =
-    contextObject.taskContext ||
-    rawPayload.taskContext ||
-    rawPayload["任务上下文"] ||
+    extractText(contextObject.taskContext) ||
+    extractText(rawPayload.taskContext) ||
+    extractText(rawPayload["任务上下文"]) ||
     (typeof rawContext === "string" ? rawContext : null) ||
     null;
   const description =
-    rawPayload.description ||
-    contextObject.description ||
-    fields.description ||
+    extractText(rawPayload.description) ||
+    extractText(contextObject.description) ||
+    extractText(fields.description) ||
     null;
 
   return {
@@ -174,11 +303,7 @@ function normalizePayload(rawPayload, config = {}) {
       rawPayload.statusName ||
       fields.status?.name ||
       null,
-    previousStatus:
-      rawPayload.previousStatus ||
-      rawPayload.fromStatus ||
-      rawPayload.changelog?.fromString ||
-      null,
+    previousStatus: extractPreviousStatus(rawPayload),
     serviceDomain:
       rawPayload.serviceDomain ||
       rawPayload.domain ||
@@ -194,8 +319,11 @@ function normalizePayload(rawPayload, config = {}) {
     labels: rawPayload.labels || fields.labels || [],
     description,
     context: {
-      taskGoal: contextObject.taskGoal || rawPayload.taskGoal || null,
-      plannerOutput: contextObject.plannerOutput || rawPayload.plannerOutput || null,
+      taskGoal: extractText(contextObject.taskGoal) || extractText(rawPayload.taskGoal) || null,
+      plannerOutput:
+        extractText(contextObject.plannerOutput) ||
+        extractText(rawPayload.plannerOutput) ||
+        null,
       taskContext,
       boardUrl,
       boardName,
@@ -315,23 +443,10 @@ async function handleRelayRequest(req, res, config) {
     return;
   }
 
-  const inboundToken =
-    parseBearerToken(req.headers.authorization) ||
-    req.headers["x-relay-token"] ||
-    "";
-
-  if (!config.authToken) {
+  if (!config.authToken && !config.webhookSecret) {
     sendJson(res, 500, {
       ok: false,
-      error: "RELAY_AUTH_TOKEN is not configured."
-    });
-    return;
-  }
-
-  if (inboundToken !== config.authToken) {
-    sendJson(res, 401, {
-      ok: false,
-      error: "Unauthorized."
+      error: "No inbound Jira authentication is configured."
     });
     return;
   }
@@ -346,6 +461,30 @@ async function handleRelayRequest(req, res, config) {
     sendJson(res, error.statusCode || 400, {
       ok: false,
       error: error.message || "Invalid request body."
+    });
+    return;
+  }
+
+  const inboundToken =
+    parseBearerToken(req.headers.authorization) ||
+    req.headers["x-relay-token"] ||
+    "";
+  const signatureHeader =
+    req.headers["x-hub-signature-256"] ||
+    req.headers["x-hub-signature"] ||
+    "";
+  const authorizedByBearer =
+    Boolean(config.authToken) && timingSafeEqualString(inboundToken, config.authToken);
+  const authorizedBySignature = verifyWebhookSignature(
+    config.webhookSecret,
+    rawBody,
+    signatureHeader
+  );
+
+  if (!authorizedByBearer && !authorizedBySignature) {
+    sendJson(res, 401, {
+      ok: false,
+      error: "Unauthorized."
     });
     return;
   }
@@ -429,9 +568,14 @@ module.exports = {
   buildForwardPayload,
   createConfig,
   createRelayServer,
+  extractPreviousStatus,
+  extractText,
   forwardJson,
   loadDotEnv,
   normalizePayload,
   parseBearerToken,
-  startServer
+  parseWebhookSignature,
+  startServer,
+  timingSafeEqualString,
+  verifyWebhookSignature
 };

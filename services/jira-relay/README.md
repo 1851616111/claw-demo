@@ -2,11 +2,11 @@
 
 ## 目标
 
-这个服务只做一件事：在 `8080` 端口接收 Jira Automation 的 HTTPS 转发请求，做最小结构整理后，再固定转发到 OpenClaw 官方 `hooks` 端点。
+这个服务只做一件事：在 `8080` 端口接收 Jira 的 HTTPS 事件请求，做最小结构整理后，再固定转发到 OpenClaw 官方 `hooks` 端点。
 
 推荐链路：
 
-`Jira Automation -> ALB (HTTPS) -> EC2:8080 -> jira-relay -> 127.0.0.1:18789/hooks/jira-relay`
+`Jira Automation / Jira Admin Webhook -> ALB (HTTPS) -> EC2:8080 -> jira-relay -> 127.0.0.1:18789/hooks/jira-relay`
 
 ## 目录
 
@@ -21,9 +21,10 @@
 
 1. 复制 `.env.example` 为 `.env`
 2. 按需要修改 `RELAY_AUTH_TOKEN`
-3. 如果 OpenClaw hooks 不是监听默认地址，修改 `LOBSTER_TARGET_URL`
-4. 将 `LOBSTER_AUTH_TOKEN` 设置成 OpenClaw 的专用 hook token
-5. 启动服务：
+3. 如果要接 Jira 原生 admin webhook，再设置 `JIRA_WEBHOOK_SECRET`
+4. 如果 OpenClaw hooks 不是监听默认地址，修改 `LOBSTER_TARGET_URL`
+5. 将 `LOBSTER_AUTH_TOKEN` 设置成 OpenClaw 的专用 hook token
+6. 启动服务：
 
 ```bash
 npm start
@@ -55,6 +56,7 @@ npm start
 | `RELAY_PATH` | 接收路径 | `/jira/events` |
 | `HEALTH_PATH` | 健康检查路径 | `/healthz` |
 | `RELAY_AUTH_TOKEN` | Jira 调用 relay 时使用的 Bearer token | 无，必填 |
+| `JIRA_WEBHOOK_SECRET` | Jira 原生 admin webhook 的 HMAC secret | 默认回退到 `RELAY_AUTH_TOKEN` |
 | `JIRA_BASE_URL` | Jira 站点根地址，用于补出工单链接 | 空 |
 | `JIRA_BOARD_URL` | 默认看板链接，用于 Planner 消息展示 | 空 |
 | `JIRA_BOARD_NAME` | 默认看板名称 | 空 |
@@ -68,7 +70,9 @@ npm start
 relay 只做三件事：
 
 1. 接收 Jira webhook
-2. 校验 `Authorization: Bearer <RELAY_AUTH_TOKEN>`
+2. 校验下面两种入站鉴权之一：
+   - `Authorization: Bearer <RELAY_AUTH_TOKEN>`
+   - `X-Hub-Signature` / `X-Hub-Signature-256`，使用 `JIRA_WEBHOOK_SECRET` 做 HMAC 验签
 3. 转发到 `LOBSTER_TARGET_URL`
 
 如果 payload 里没有工单链接或看板链接，relay 会尝试用以下环境变量补齐：
@@ -76,6 +80,12 @@ relay 只做三件事：
 - `JIRA_BASE_URL` -> `https://.../browse/<ISSUE_KEY>`
 - `JIRA_BOARD_URL`
 - `JIRA_BOARD_NAME`
+
+如果 Jira 发来的是原生 issue webhook，relay 还会自动做这些兼容处理：
+
+- 从 Jira 富文本 description 里提取纯文本，方便 Planner 读 `allow_execute: true`
+- 从 `changelog.items` 里补出 `previousStatus`
+- 用 `JIRA_BASE_URL` 自动补 `issueUrl`
 
 ## OpenClaw Hook 配置
 
@@ -156,6 +166,24 @@ relay 只做三件事：
 Authorization: Bearer <RELAY_AUTH_TOKEN>
 Content-Type: application/json
 ```
+
+## Jira Admin Webhook 示例
+
+Atlassian 官方支持通过 Jira 原生 webhook 推送多个 issue/comment 事件到同一个端点：
+
+- issue: `jira:issue_created` `jira:issue_updated` `jira:issue_deleted`
+- comment: `comment_created` `comment_updated` `comment_deleted`
+
+注册时推荐：
+
+- `url`: `https://weaclaw-dp-oghwck1gy3hj.nssclaw.com/jira/events`
+- `filters.issue-related-events-section`: `project = KAN`
+- `excludeBody`: `false`
+- `secret`: 使用 `JIRA_WEBHOOK_SECRET`
+
+官方文档：
+
+- Jira webhooks: `https://developer.atlassian.com/cloud/jira/software/webhooks/`
 
 ## 转发后的结构
 
