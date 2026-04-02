@@ -2,11 +2,13 @@
 
 ## 目标
 
-这个服务只做一件事：在 `80` 端口接收 Jira Automation 的 HTTPS 转发请求，做最小结构整理后，再固定转发到龙虾的 `18789` 端口。
+这个服务只做一件事：在 `8080` 端口接收 Jira Automation 的 HTTPS 转发请求，做最小结构整理后，再固定转发到龙虾的 `18789` 端口。
 
 推荐链路：
 
-`Jira Automation -> ALB (HTTPS) -> EC2:80 -> jira-relay -> 127.0.0.1:18789`
+推荐链路（建议用 Nginx 监听 80 再转发到 8080）：
+
+`Jira Automation -> ALB (HTTPS) -> EC2:80 -> Nginx -> 127.0.0.1:8080 (jira-relay) -> 127.0.0.1:18789`
 
 ## 目录
 
@@ -33,11 +35,24 @@ npm start
 - `POST /jira/events`
 - `GET /healthz`
 
+默认端口：
+
+- `8080`
+
+## Ubuntu 部署（systemd + 可选 Nginx）
+
+仓库内提供了可直接落地的示例文件：
+
+- `deploy/ubuntu/jira-relay.service`：systemd unit
+- `deploy/ubuntu/jira-relay.env`：环境变量模板（复制到 `/etc/jira-relay.env`）
+- `deploy/ubuntu/nginx-jira-relay.conf`：Nginx 反向代理示例（80 -> 8080）
+- `deploy/ubuntu/install.sh`：一键部署脚本（同步到 `/opt/jira-relay` 并启动 systemd；可选安装 Nginx 配置）
+
 ## 环境变量
 
 | 变量 | 说明 | 默认值 |
 | --- | --- | --- |
-| `PORT` | 监听端口 | `80` |
+| `PORT` | 监听端口 | `8080` |
 | `HOST` | 监听地址 | `0.0.0.0` |
 | `RELAY_PATH` | 接收路径 | `/jira/events` |
 | `HEALTH_PATH` | 健康检查路径 | `/healthz` |

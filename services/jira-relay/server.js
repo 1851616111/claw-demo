@@ -65,7 +65,7 @@ function createConfig(options = {}) {
   return {
     rootDir,
     host: process.env.HOST || "0.0.0.0",
-    port: parseInteger(process.env.PORT, 80),
+    port: parseInteger(process.env.PORT, 8080),
     relayPath,
     healthPath,
     authToken: process.env.RELAY_AUTH_TOKEN || "",

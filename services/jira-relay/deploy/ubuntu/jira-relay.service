@@ -1,0 +1,29 @@
+[Unit]
+Description=Jira Relay (forward Jira Automation webhooks to Lobster)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/jira-relay
+
+# Run as a dedicated system user (recommended):
+#   sudo useradd --system --home /opt/jira-relay --shell /usr/sbin/nologin jira-relay
+User=jira-relay
+Group=jira-relay
+
+EnvironmentFile=/etc/jira-relay.env
+
+# Node must be installed on the host (>=18).
+ExecStart=/usr/bin/node /opt/jira-relay/server.js
+
+Restart=on-failure
+RestartSec=2
+TimeoutStopSec=10
+
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+
