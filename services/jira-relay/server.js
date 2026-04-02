@@ -55,6 +55,18 @@ function parseInteger(value, fallback) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function isPlainObject(value) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function buildIssueUrl(baseUrl, issueKey) {
+  if (!baseUrl || !issueKey) {
+    return null;
+  }
+
+  return `${String(baseUrl).replace(/\/+$/, "")}/browse/${encodeURIComponent(issueKey)}`;
+}
+
 function createConfig(options = {}) {
   const rootDir = options.rootDir || __dirname;
   loadDotEnv(rootDir);
@@ -71,6 +83,9 @@ function createConfig(options = {}) {
     authToken: process.env.RELAY_AUTH_TOKEN || "",
     requestTimeoutMs: parseInteger(process.env.REQUEST_TIMEOUT_MS, 10000),
     bodyLimitBytes: parseInteger(process.env.BODY_LIMIT_BYTES, 1024 * 1024),
+    jiraBaseUrl: process.env.JIRA_BASE_URL || "",
+    defaultBoardUrl: process.env.JIRA_BOARD_URL || "",
+    defaultBoardName: process.env.JIRA_BOARD_NAME || "",
     lobsterTargetUrl: process.env.LOBSTER_TARGET_URL || "http://127.0.0.1:18789/hooks/jira-relay",
     lobsterAuthToken: process.env.LOBSTER_AUTH_TOKEN || ""
   };
@@ -107,9 +122,38 @@ function readRequestBody(req, limitBytes) {
   });
 }
 
-function normalizePayload(rawPayload) {
+function normalizePayload(rawPayload, config = {}) {
   const issue = rawPayload.issue || {};
   const fields = issue.fields || {};
+  const rawContext = rawPayload.context;
+  const contextObject = isPlainObject(rawContext) ? rawContext : {};
+  const issueKey = rawPayload.issueKey || issue.key || null;
+  const issueUrl =
+    rawPayload.issueUrl ||
+    rawPayload.issueBrowseUrl ||
+    rawPayload.url ||
+    buildIssueUrl(config.jiraBaseUrl, issueKey);
+  const boardUrl =
+    rawPayload.boardUrl ||
+    contextObject.boardUrl ||
+    config.defaultBoardUrl ||
+    null;
+  const boardName =
+    rawPayload.boardName ||
+    contextObject.boardName ||
+    config.defaultBoardName ||
+    null;
+  const taskContext =
+    contextObject.taskContext ||
+    rawPayload.taskContext ||
+    rawPayload["任务上下文"] ||
+    (typeof rawContext === "string" ? rawContext : null) ||
+    null;
+  const description =
+    rawPayload.description ||
+    contextObject.description ||
+    fields.description ||
+    null;
 
   return {
     eventName:
@@ -117,7 +161,7 @@ function normalizePayload(rawPayload) {
       rawPayload.eventName ||
       rawPayload.webhookEvent ||
       "jira_event",
-    issueKey: rawPayload.issueKey || issue.key || null,
+    issueKey,
     issueId: rawPayload.issueId || issue.id || null,
     summary: rawPayload.summary || fields.summary || null,
     projectKey:
@@ -144,18 +188,19 @@ function normalizePayload(rawPayload) {
       rawPayload.executionMode ||
       rawPayload.mode ||
       null,
-    issueUrl:
-      rawPayload.issueUrl ||
-      rawPayload.issueBrowseUrl ||
-      rawPayload.url ||
-      null,
-    context:
-      rawPayload.context ||
-      rawPayload.taskContext ||
-      rawPayload["任务上下文"] ||
-      rawPayload.description ||
-      fields.description ||
-      null
+    issueUrl,
+    issueType: rawPayload.issueType || fields.issuetype?.name || null,
+    priority: rawPayload.priority || fields.priority?.name || null,
+    labels: rawPayload.labels || fields.labels || [],
+    description,
+    context: {
+      taskGoal: contextObject.taskGoal || rawPayload.taskGoal || null,
+      plannerOutput: contextObject.plannerOutput || rawPayload.plannerOutput || null,
+      taskContext,
+      boardUrl,
+      boardName,
+      description
+    }
   };
 }
 
@@ -189,7 +234,10 @@ function buildForwardPayload(rawPayload, normalized, req, targetUrl) {
       summary: normalized.summary,
       projectKey: normalized.projectKey,
       status: normalized.status,
-      issueUrl: normalized.issueUrl
+      issueUrl: normalized.issueUrl,
+      issueType: normalized.issueType,
+      priority: normalized.priority,
+      labels: normalized.labels
     },
     context: normalized.context,
     raw: rawPayload
@@ -302,7 +350,7 @@ async function handleRelayRequest(req, res, config) {
     return;
   }
 
-  const normalized = normalizePayload(rawPayload);
+  const normalized = normalizePayload(rawPayload, config);
   if (!config.lobsterTargetUrl) {
     sendJson(res, 502, {
       ok: false,

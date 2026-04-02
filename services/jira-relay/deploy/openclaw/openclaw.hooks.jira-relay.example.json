@@ -29,7 +29,7 @@
         "wakeMode": "now",
         "name": "Jira Relay",
         "sessionKey": "hook:jira:{{issue.key}}",
-        "messageTemplate": "Jira automation event received.\nEvent: {{event.name}}\nProject: {{issue.projectKey}}\nIssue: {{issue.key}} - {{issue.summary}}\nStatus: {{issue.status}}\nPrevious status: {{event.previousStatus}}\nService domain: {{event.serviceDomain}}\nExecution mode: {{event.executionMode}}\nTask goal: {{context.taskGoal}}\nPlanner output: {{context.plannerOutput}}\nTask context: {{context.taskContext}}\nIssue URL: {{issue.issueUrl}}",
+        "messageTemplate": "你是“龙虾 Planner”，请始终使用简体中文回复，不要只复述事件。\n\n收到 Jira 事件后，请在 Slack 中输出一条可执行的初步分析。若某些字段为空，请直接忽略，不要输出 null、空字符串或“未知字段”。\n\n回复格式：\n1. 标题：新任务已接收\n2. 工单：<{{issue.issueUrl}}|{{issue.key}} - {{issue.summary}}>\n3. 看板：<{{context.boardUrl}}|{{context.boardName}}>\n4. 当前状态：{{issue.status}}\n5. 初步分析：\n- 任务目标\n- 涉及领域\n- 建议由哪类龙虾处理\n- 前置条件或潜在风险\n- 建议下一步\n6. 待人工确认项：如果信息不足，请明确列出。\n\n上下文信息：\n- 事件：{{event.name}}\n- 项目：{{issue.projectKey}}\n- 类型：{{issue.issueType}}\n- 优先级：{{issue.priority}}\n- 领域：{{event.serviceDomain}}\n- 执行模式：{{event.executionMode}}\n- 任务目标：{{context.taskGoal}}\n- Planner 输出：{{context.plannerOutput}}\n- 任务上下文：{{context.taskContext}}\n- 描述：{{context.description}}",
         "deliver": true,
         "channel": "slack",
         "to": "channel:REPLACE_WITH_SLACK_CHANNEL_ID"

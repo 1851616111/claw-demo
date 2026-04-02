@@ -55,6 +55,9 @@ npm start
 | `RELAY_PATH` | 接收路径 | `/jira/events` |
 | `HEALTH_PATH` | 健康检查路径 | `/healthz` |
 | `RELAY_AUTH_TOKEN` | Jira 调用 relay 时使用的 Bearer token | 无，必填 |
+| `JIRA_BASE_URL` | Jira 站点根地址，用于补出工单链接 | 空 |
+| `JIRA_BOARD_URL` | 默认看板链接，用于 Planner 消息展示 | 空 |
+| `JIRA_BOARD_NAME` | 默认看板名称 | 空 |
 | `LOBSTER_TARGET_URL` | 固定转发地址 | `http://127.0.0.1:18789/hooks/jira-relay` |
 | `LOBSTER_AUTH_TOKEN` | relay 转发给 OpenClaw hooks 时附带的 Bearer token | 空 |
 | `REQUEST_TIMEOUT_MS` | 转发超时时间 | `10000` |
@@ -67,6 +70,12 @@ relay 只做三件事：
 1. 接收 Jira webhook
 2. 校验 `Authorization: Bearer <RELAY_AUTH_TOKEN>`
 3. 转发到 `LOBSTER_TARGET_URL`
+
+如果 payload 里没有工单链接或看板链接，relay 会尝试用以下环境变量补齐：
+
+- `JIRA_BASE_URL` -> `https://.../browse/<ISSUE_KEY>`
+- `JIRA_BOARD_URL`
+- `JIRA_BOARD_NAME`
 
 ## OpenClaw Hook 配置
 
@@ -83,6 +92,13 @@ relay 只做三件事：
 - `deliver: true`
 - `channel: "slack"`
 - `to: "channel:<slack-channel-id>"`
+
+推荐让这条 hook 直接扮演 `Planner`，固定要求：
+
+- 使用简体中文
+- 显示可点击的工单链接
+- 显示可点击的看板链接
+- 给出任务初步分析，而不是只做“收到”确认
 
 建议：
 
@@ -109,12 +125,18 @@ relay 只做三件事：
   "summary": {{issue.summary.asJsonString}},
   "projectKey": "{{issue.project.key}}",
   "status": "{{issue.status.name}}",
+  "issueUrl": {{issue.url.asJsonString}},
+  "issueType": "{{issue.issueType.name}}",
+  "priority": {{issue.priority.name.asJsonString}},
   "serviceDomain": {{issue.服务域.asJsonString}},
   "executionMode": {{issue.执行模式.asJsonString}},
   "context": {
     "taskGoal": {{issue.任务目标.asJsonString}},
     "plannerOutput": {{issue.Planner输出.asJsonString}},
-    "taskContext": {{issue.任务上下文.asJsonString}}
+    "taskContext": {{issue.任务上下文.asJsonString}},
+    "description": {{issue.description.asJsonString}},
+    "boardUrl": "https://netstars-sre-demo.atlassian.net/jira/software/projects/KAN/boards/2",
+    "boardName": "龙虾骑士看板"
   }
 }
 ```
@@ -158,12 +180,20 @@ relay 发给 OpenClaw hooks 的 body 结构如下：
     "summary": "创建 demo 环境",
     "projectKey": "KAN",
     "status": "待办",
-    "issueUrl": "https://..."
+    "issueUrl": "https://...",
+    "issueType": "任务",
+    "priority": "Medium",
+    "labels": [
+      "demo"
+    ]
   },
   "context": {
     "taskGoal": "...",
     "plannerOutput": "...",
-    "taskContext": "..."
+    "taskContext": "...",
+    "boardUrl": "https://...",
+    "boardName": "龙虾骑士看板",
+    "description": "..."
   },
   "raw": {
     "...": "Jira 原始 payload"
@@ -177,6 +207,8 @@ OpenClaw 映射里可以直接读取这些字段，例如：
 - `{{issue.key}}`
 - `{{issue.summary}}`
 - `{{issue.issueUrl}}`
+- `{{context.boardUrl}}`
+- `{{context.boardName}}`
 - `{{context.taskGoal}}`
 - `{{context.plannerOutput}}`
 - `{{context.taskContext}}`

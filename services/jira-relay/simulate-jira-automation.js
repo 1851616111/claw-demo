@@ -91,7 +91,9 @@ async function main() {
     context: {
       taskGoal: "验证 Jira Automation 事件是否能转发给龙虾",
       plannerOutput: "等待 Planner 规划",
-      taskContext: "system=aws, service=notifications"
+      taskContext: "system=aws, service=notifications",
+      boardUrl: "https://netstars-sre-demo.atlassian.net/jira/software/projects/KAN/boards/2",
+      boardName: "龙虾骑士看板"
     }
   };
 
@@ -111,6 +113,8 @@ async function main() {
   assert.strictEqual(forwardedBody.issue.summary, "创建 demo 告警通知链路");
   assert.strictEqual(forwardedBody.issue.projectKey, "KAN");
   assert.strictEqual(forwardedBody.context.taskGoal, "验证 Jira Automation 事件是否能转发给龙虾");
+  assert.strictEqual(forwardedBody.context.boardUrl, "https://netstars-sre-demo.atlassian.net/jira/software/projects/KAN/boards/2");
+  assert.strictEqual(forwardedBody.context.boardName, "龙虾骑士看板");
   assert.strictEqual(forwardedBody.relay.source.userAgent, "Atlassian HttpClient");
   assert.strictEqual(forwardedHeaders.authorization, "Bearer lobster-internal-token");
 
