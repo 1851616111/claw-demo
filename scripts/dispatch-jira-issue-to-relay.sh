@@ -7,7 +7,7 @@ RELAY_URL="${RELAY_URL:-http://127.0.0.1:8080/jira/events}"
 SITE_URL="${SITE_URL:-https://netstars-sre-demo.atlassian.net}"
 BOARD_URL="${BOARD_URL:-https://netstars-sre-demo.atlassian.net/jira/software/projects/KAN/boards/2}"
 BOARD_NAME="${BOARD_NAME:-龙虾骑士看板}"
-ACLI_RUN_AS_USER="${ACLI_RUN_AS_USER:-${SUDO_USER:-ubuntu}}"
+ACLI_RUN_AS_USER="${ACLI_RUN_AS_USER:-ubuntu}"
 
 if [[ -z "$ISSUE_KEY" ]]; then
   echo "Usage: $0 <KAN-KEY>" >&2
