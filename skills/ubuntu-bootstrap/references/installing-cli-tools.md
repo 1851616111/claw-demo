@@ -58,8 +58,7 @@ Expected checks:
 
 ```bash
 aws --version
-acli version
+acli --version
 sudo -u ubuntu HOME=/home/ubuntu aws sts get-caller-identity --profile ai
 sudo -u ubuntu HOME=/home/ubuntu acli jira auth status
 ```
-
