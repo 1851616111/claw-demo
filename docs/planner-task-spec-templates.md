@@ -99,3 +99,9 @@ delta_instruction: |
 ---
 
 维护本文件时：新增任务类型时复制「推荐结构」增删块即可；**每份对外 SPEC 应有 `template_id` 与 `version`**，与验收记录对应。
+
+## Demo 补充
+
+仓库里还提供了一份更轻量、适合明天演示直接使用的 S3 bucket 规格：
+
+- [S3 Bucket 创建 Demo SPEC](planner-task-spec-s3-bucket-demo.md)

@@ -99,6 +99,15 @@ relay 只做三件事：
 - 显示可点击的工单链接
 - 显示可点击的看板链接
 - 给出任务初步分析，而不是只做“收到”确认
+- 对边界清晰的 demo 任务，可以由 Planner 直接兼任执行者
+
+当前 demo 推荐直接支持：
+
+- `创建 S3 bucket`
+  - 使用 `aws --profile ai`
+  - 默认 `ap-northeast-1`
+  - 只允许创建新的私有 bucket
+  - 不允许 public ACL / public policy / delete
 
 建议：
 
@@ -212,6 +221,13 @@ OpenClaw 映射里可以直接读取这些字段，例如：
 - `{{context.taskGoal}}`
 - `{{context.plannerOutput}}`
 - `{{context.taskContext}}`
+
+如果你准备做“Planner 兼任执行者”的 demo，建议在 Jira 描述或 `任务上下文` 中直接写出：
+
+- `bucket_name`
+- `region`
+- `purpose`
+- 是否只创建 private bucket
 
 ## 测试
 
