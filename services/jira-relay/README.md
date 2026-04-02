@@ -6,9 +6,7 @@
 
 推荐链路：
 
-推荐链路（建议用 Nginx 监听 80 再转发到 8080）：
-
-`Jira Automation -> ALB (HTTPS) -> EC2:80 -> Nginx -> 127.0.0.1:8080 (jira-relay) -> 127.0.0.1:18789`
+`Jira Automation -> ALB (HTTPS) -> EC2:8080 -> jira-relay -> 127.0.0.1:18789`
 
 ## 目录
 
@@ -39,14 +37,13 @@ npm start
 
 - `8080`
 
-## Ubuntu 部署（systemd + 可选 Nginx）
+## Ubuntu 部署（systemd）
 
 仓库内提供了可直接落地的示例文件：
 
 - `deploy/ubuntu/jira-relay.service`：systemd unit
 - `deploy/ubuntu/jira-relay.env`：环境变量模板（复制到 `/etc/jira-relay.env`）
-- `deploy/ubuntu/nginx-jira-relay.conf`：Nginx 反向代理示例（80 -> 8080）
-- `deploy/ubuntu/install.sh`：一键部署脚本（同步到 `/opt/jira-relay` 并启动 systemd；可选安装 Nginx 配置）
+- `deploy/ubuntu/install.sh`：一键部署脚本（同步到 `/opt/jira-relay` 并启动 systemd）
 
 ## 环境变量
 
