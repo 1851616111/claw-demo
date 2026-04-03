@@ -25,9 +25,9 @@ done
 if [[ -d "$SKILLS_SOURCE_DIR" ]]; then
   install -d -m 755 "$WORKSPACE_DIR/skills"
   cp -R "$SKILLS_SOURCE_DIR/." "$WORKSPACE_DIR/skills/"
+  find "$WORKSPACE_DIR/skills" -type f -name '*.sh' -exec chmod +x {} +
 fi
 
 echo "Synced markdown files from: $AGENT_SOURCE_DIR"
 echo "Synced skills from: $SKILLS_SOURCE_DIR"
 echo "Workspace target: $WORKSPACE_DIR"
-

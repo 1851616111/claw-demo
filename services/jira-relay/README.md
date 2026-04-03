@@ -98,12 +98,15 @@ relay 只做三件事：
 
 - `POST /hooks/jira-relay`
 - `action: "agent"`
-- `sessionKey: "hook:jira:{{issue.key}}"`
+- `sessionKey: "hook:jira:{{issue.key}}:{{relay.correlationId}}"`
 - `deliver: true`
 - `channel: "slack"`
 - `to: "channel:<slack-channel-id>"`
 
-推荐让这条 hook 直接扮演 `Planner`，固定要求：
+推荐让这条 hook 直接扮演 `Planner`，但要注意两点：
+
+- 关键行为规则应放在 workspace 的 `IDENTITY.md` / `MEMORY.md` / skills 中
+- hook `messageTemplate` 只保留 Jira 事件事实和结构化上下文，避免把大段提示词作为外部 webhook 文本发进去
 
 - 使用简体中文
 - 显示可点击的工单链接

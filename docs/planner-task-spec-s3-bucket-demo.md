@@ -82,6 +82,7 @@ Planner 在输出分析时至少要覆盖：
 2. 判断是否满足直接执行条件
    - 当前状态为 `执行中`
    - 或描述 / 任务上下文中明确出现 `allow_execute: true` / `允许执行: true`
+   - 并且 `执行中` 的批准语义高于描述中的 `allow_execute: false`；后者只能约束 `待办` / `计划`
 3. 如果满足：
    - 使用 `aws s3api create-bucket`
    - 使用 `aws s3api head-bucket` 验证
@@ -120,6 +121,12 @@ aws s3api get-bucket-location --bucket <bucket-name> --profile ai
 - 是否创建成功
 - 验证命令结果摘要
 - 如果失败，核心错误和建议下一步
+
+## Webhook 会话要求
+
+- Jira webhook 到 OpenClaw 时，应当把 hook 正文保持为“事件事实 + 结构化上下文”，不要把大量行为规则塞进 webhook 文本。
+- Planner 的行为边界、中文输出要求、执行闸门优先级，应固化在 workspace 的身份与记忆文件中。
+- hook session key 应按“单次事件”隔离，推荐包含 `relay.correlationId`，避免同一工单长期复用旧会话导致判断串味。
 
 ## 风险边界
 

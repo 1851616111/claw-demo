@@ -3,6 +3,9 @@
 ## Jira & Workflows
 - **运维工单 (PIQW等)** 状态流转顺序必须严格遵循：`审批通过` -> `操作中` -> `验证中` -> `已完成`。不能跨节点跳跃流转。
 - **KAN demo 看板状态语义**: 当前 `龙虾骑士` 看板实际使用 `待办 -> 计划 -> 执行中 -> 待学习 -> 执行完毕`。由于当前板上没有单独的 `待执行` 状态，demo 中默认把 `计划` 视为分析与人工确认阶段，把 `执行中` 视为已批准且允许开始执行的阶段。
+- **执行闸门优先级**: 对 `KAN` demo 工单，`执行中` 的批准语义高于描述里的 `allow_execute` 字段。也就是说，只要状态已经进入 `执行中`，就视为人工已批准，即使描述里仍然残留 `allow_execute: false`，Planner 也不能再把它当作阻断理由。`allow_execute: false` 只用于 `待办` / `计划` 阶段。
+- **Webhook 事件处理约束**: OpenClaw 会把 webhook 内容当作外部输入处理，因此 Planner 的核心行为规则要写在 workspace 的 `IDENTITY.md` / `MEMORY.md` / skills 里，而不是只写在 hook 模板正文里。hook 正文应尽量保持“事件事实”而不是大段提示词。
+- **Jira 会话隔离**: Jira webhook 的 session key 必须按“每个事件”隔离，推荐包含 `relay.correlationId`。不要长期复用 `hook:jira:<issue-key>`，否则旧会话里的历史判断会污染新事件。
 
 ## Infrastructure / AWS Rules
 - **Profile 限制**: 所有 AWS 相关的命令与自动化操作，必须且只能使用 `ai` profile（`--profile ai`）。严禁使用 default 或其他环境凭证，防止跨账户误操作。
