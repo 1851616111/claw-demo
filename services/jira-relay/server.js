@@ -518,7 +518,7 @@ async function handleRelayRequest(req, res, config) {
     const isSuccess =
       upstreamResponse.statusCode >= 200 && upstreamResponse.statusCode < 300;
 
-    sendJson(res, isSuccess ? 202 : upstreamResponse.statusCode, {
+    sendJson(res, isSuccess ? 200 : upstreamResponse.statusCode, {
       ok: isSuccess,
       targetUrl: config.lobsterTargetUrl,
       correlationId: forwardPayload.relay.correlationId,

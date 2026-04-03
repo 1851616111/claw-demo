@@ -75,6 +75,8 @@ relay 只做三件事：
    - `X-Hub-Signature` / `X-Hub-Signature-256`，使用 `JIRA_WEBHOOK_SECRET` 做 HMAC 验签
 3. 转发到 `LOBSTER_TARGET_URL`
 
+对 Jira 原生 admin webhook，成功处理后应返回 `200`。Atlassian 官方文档明确说明，其他状态码都应视为不成功的触发结果。
+
 如果 payload 里没有工单链接或看板链接，relay 会尝试用以下环境变量补齐：
 
 - `JIRA_BASE_URL` -> `https://.../browse/<ISSUE_KEY>`
